@@ -23,7 +23,8 @@ import {
   ListItem,
   ListItemText,
   Divider,
-  Badge
+  Badge,
+  LinearProgress
 } from '@mui/material';
 import {
   AccountBalanceWallet,
@@ -33,57 +34,49 @@ import {
   History,
   MonetizationOn,
   SmartToy,
-  Storefront,
   TrendingUp,
-  AttachMoney
+  Refresh
 } from '@mui/icons-material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
-// Dark theme with beautiful gradients
+// Dark theme
 const theme = createTheme({
   palette: {
     mode: 'dark',
-    primary: {
-      main: '#00d4aa',
-    },
-    secondary: {
-      main: '#ff6b6b',
-    },
-    background: {
-      default: '#0a0e1a',
-      paper: '#1a1f2e',
-    },
+    primary: { main: '#00d4aa' },
+    secondary: { main: '#ff6b6b' },
+    background: { default: '#0a0e1a', paper: '#1a1f2e' },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
   },
 });
 
-// Updated contract addresses from deployment
-const vnstTokenAddress = "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9";
-const vbtcTokenAddress = "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9";
-const copyrightChainAddress = "0x5FC8d32690cc91D4c39d9d3abcBD16989F875707";
+// Contract addresses from deployment
+const vnstTokenAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const vbtcTokenAddress = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
+const copyrightChainAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0";
+
+// AI Backend URL
+const AI_BACKEND_URL = "http://localhost:3001";
 
 // Contract ABIs
 const vnstABI = [
   "function balanceOf(address account) external view returns (uint256)",
   "function approve(address spender, uint256 amount) external returns (bool)",
-  "function getFreeVNST() external",
-  "function transfer(address to, uint256 amount) external returns (bool)"
+  "function getFreeVNST() external"
 ];
 
 const vbtcABI = [
   "function balanceOf(address account) external view returns (uint256)",
   "function approve(address spender, uint256 amount) external returns (bool)",
-  "function getFreevBTC() external",
-  "function transfer(address to, uint256 amount) external returns (bool)"
+  "function getFreevBTC() external"
 ];
 
 const copyrightABI = [
   "function registerArtwork(string memory title, string memory ipfsHash, bool premium) public returns (bytes32)",
   "function requestAIVerification(bytes32 artworkId) public",
-  "function listArtworkForLicensing(bytes32 artworkId, uint256 priceInVNST) public",
-  "function purchaseLicense(bytes32 artworkId, uint256 durationInDays) public",
+  "function submitAIResults(bytes32 artworkId, uint8 confidenceScore, string memory verificationHash) public",
   "function getArtwork(bytes32 id) public view returns (tuple(address creator, string title, string ipfsHash, uint256 timestamp, uint256 vnstPaid, uint256 vbtcPaid, bool isPremium, bool isAIVerified, uint8 aiConfidenceScore, string aiVerificationHash, uint256 licensePrice, bool isForSale))",
   "function getUserArtworks(address user) public view returns (bytes32[])",
   "function getMarketplaceStats() public view returns (uint256, uint256, uint256)",
@@ -91,9 +84,7 @@ const copyrightABI = [
   "function basicRegistrationFee() public view returns (uint256)",
   "function premiumRegistrationFee() public view returns (uint256)",
   "function aiVerificationFee() public view returns (uint256)",
-  "event Registered(bytes32 indexed id, address indexed creator, string title, string ipfsHash, uint256 timestamp, uint256 vnstPaid, bool isPremium)",
-  "event AIVerified(bytes32 indexed artworkId, uint8 confidenceScore, string verificationHash, uint256 vbtcPaid)",
-  "event LicensePurchased(bytes32 indexed artworkId, address indexed licensee, uint256 price, uint256 duration)"
+  "function totalRegistrations() public view returns (uint256)"
 ];
 
 function App() {
@@ -105,6 +96,7 @@ function App() {
   const [ipfsHash, setIpfsHash] = useState('');
   const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [aiProcessing, setAiProcessing] = useState(false);
   const [status, setStatus] = useState('');
   const [statusType, setStatusType] = useState('info');
   const [registeredWorks, setRegisteredWorks] = useState([]);
@@ -116,7 +108,21 @@ function App() {
   const [aiFee, setAiFee] = useState('0.05');
   const [tabValue, setTabValue] = useState(0);
   const [marketStats, setMarketStats] = useState({ registrations: 0, licenses: 0, revenue: 0 });
-  const [creatorEarnings, setCreatorEarnings] = useState('0');
+  const [aiBackendStatus, setAiBackendStatus] = useState('unknown');
+
+  // Check AI Backend Status
+  const checkAIBackend = async () => {
+    try {
+      const response = await fetch(`${AI_BACKEND_URL}/health`);
+      if (response.ok) {
+        setAiBackendStatus('online');
+      } else {
+        setAiBackendStatus('offline');
+      }
+    } catch (error) {
+      setAiBackendStatus('offline');
+    }
+  };
 
   const connectWallet = async () => {
     try {
@@ -126,7 +132,6 @@ function App() {
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
         
-        // Initialize contracts
         const vnstInstance = new ethers.Contract(vnstTokenAddress, vnstABI, signer);
         const vbtcInstance = new ethers.Contract(vbtcTokenAddress, vbtcABI, signer);
         const copyrightInstance = new ethers.Contract(copyrightChainAddress, copyrightABI, signer);
@@ -137,13 +142,12 @@ function App() {
         setVbtcContract(vbtcInstance);
         setCopyrightContract(copyrightInstance);
         
-        // Update balances and fees
-        await updateBalances(vnstInstance, vbtcInstance, copyrightInstance, address);
+        await updateAllData(vnstInstance, vbtcInstance, copyrightInstance, address);
         
         setStatus(`🎉 Wallet connected: ${address.substring(0, 6)}...${address.substring(38)}`);
         setStatusType('success');
       } else {
-        setStatus('❌ Please install MetaMask to connect your wallet!');
+        setStatus('❌ Please install MetaMask!');
         setStatusType('error');
       }
     } catch (error) {
@@ -152,15 +156,15 @@ function App() {
     }
   };
 
-  const updateBalances = async (vnstInstance, vbtcInstance, copyrightInstance, address) => {
+  const updateAllData = async (vnstInstance, vbtcInstance, copyrightInstance, address) => {
     try {
-      // Get token balances
+      // Token balances
       const vnstBal = await vnstInstance.balanceOf(address);
       const vbtcBal = await vbtcInstance.balanceOf(address);
       setVnstBalance(ethers.formatEther(vnstBal));
       setVbtcBalance(ethers.formatUnits(vbtcBal, 8));
       
-      // Get registration fees
+      // Fees
       const basicFeeValue = await copyrightInstance.basicRegistrationFee();
       const premiumFeeValue = await copyrightInstance.premiumRegistrationFee();
       const aiFeeValue = await copyrightInstance.aiVerificationFee();
@@ -168,29 +172,51 @@ function App() {
       setPremiumFee(ethers.formatEther(premiumFeeValue));
       setAiFee(ethers.formatUnits(aiFeeValue, 8));
       
-      // Get user artworks
-      const artworkIds = await copyrightInstance.getUserArtworks(address);
-      const artworks = [];
-      for (let id of artworkIds) {
-        const artwork = await copyrightInstance.getArtwork(id);
-        artworks.push({ id, ...artwork });
+      // User artworks
+      try {
+        const artworkIds = await copyrightInstance.getUserArtworks(address);
+        const artworks = [];
+        for (let id of artworkIds) {
+          try {
+            const artwork = await copyrightInstance.getArtwork(id);
+            artworks.push({ 
+              id, 
+              creator: artwork[0],
+              title: artwork[1], 
+              ipfsHash: artwork[2],
+              timestamp: artwork[3],
+              vnstPaid: artwork[4],
+              vbtcPaid: artwork[5],
+              isPremium: artwork[6],
+              isAIVerified: artwork[7],
+              aiConfidenceScore: artwork[8],
+              aiVerificationHash: artwork[9],
+              licensePrice: artwork[10],
+              isForSale: artwork[11]
+            });
+          } catch (err) {
+            console.error("Error getting artwork:", err);
+          }
+        }
+        setUserArtworks(artworks);
+      } catch (err) {
+        console.error("Error getting user artworks:", err);
       }
-      setUserArtworks(artworks);
       
-      // Get marketplace stats
-      const stats = await copyrightInstance.getMarketplaceStats();
-      setMarketStats({
-        registrations: stats[0].toString(),
-        licenses: stats[1].toString(),
-        revenue: ethers.formatEther(stats[2])
-      });
-      
-      // Get creator earnings
-      const earnings = await copyrightInstance.creatorEarnings(address);
-      setCreatorEarnings(ethers.formatEther(earnings));
+      // Marketplace stats
+      try {
+        const stats = await copyrightInstance.getMarketplaceStats();
+        setMarketStats({
+          registrations: stats[0].toString(),
+          licenses: stats[1].toString(),
+          revenue: ethers.formatEther(stats[2])
+        });
+      } catch (err) {
+        console.error("Error getting stats:", err);
+      }
       
     } catch (error) {
-      console.error('Error updating balances:', error);
+      console.error('Error updating data:', error);
     }
   };
 
@@ -212,7 +238,7 @@ function App() {
         setStatus('✅ Received 0.1 free vBTC tokens!');
       }
       
-      await updateBalances(vnstContract, vbtcContract, copyrightContract, account);
+      await updateAllData(vnstContract, vbtcContract, copyrightContract, account);
       setStatusType('success');
     } catch (error) {
       setStatus(`❌ Failed to get ${tokenType}: ${error.message}`);
@@ -239,7 +265,7 @@ function App() {
     const requiredFeeWei = ethers.parseEther(requiredFee);
 
     if (parseFloat(vnstBalance) < parseFloat(requiredFee)) {
-      setStatus(`⚠️ Insufficient VNST balance. Need ${requiredFee} VNST for ${isPremium ? 'premium' : 'basic'} registration.`);
+      setStatus(`⚠️ Insufficient VNST balance. Need ${requiredFee} VNST.`);
       setStatusType('warning');
       return;
     }
@@ -249,38 +275,33 @@ function App() {
       setStatus('💰 Approving VNST payment...');
       setStatusType('info');
       
-      // Approve VNST spending
-      const approveTx = await vnstContract.approve(copyrightChainAddress, requiredFeeWei);
+      const approveTx = await vnstContract.approve(copyrightChainAddress, requiredFeeWei, {
+        gasLimit: 100000
+      });
       await approveTx.wait();
       
       setStatus('⏳ Registering artwork on blockchain...');
       
-      // Register artwork
-      const registerTx = await copyrightContract.registerArtwork(title, ipfsHash, isPremium);
-      const receipt = await registerTx.wait();
+      const registerTx = await copyrightContract.registerArtwork(title, ipfsHash, isPremium, {
+        gasLimit: 500000
+      });
+      await registerTx.wait();
       
-      // Get artwork ID from event
-      const event = receipt.logs.find(log => log.fragment && log.fragment.name === 'Registered');
-      const artworkId = event ? event.args[0] : null;
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      await updateAllData(vnstContract, vbtcContract, copyrightContract, account);
       
-      await updateBalances(vnstContract, vbtcContract, copyrightContract, account);
-      
-      setStatus(`✅ ${isPremium ? 'Premium' : 'Basic'} artwork registered! Paid ${requiredFee} VNST. ID: ${artworkId ? artworkId.substring(0, 10) + '...' : 'Generated'}`);
+      setStatus(`✅ ${isPremium ? 'Premium' : 'Basic'} artwork registered! Paid ${requiredFee} VNST.`);
       setStatusType('success');
       
       const newWork = {
         title,
         ipfsHash,
         timestamp: new Date().toLocaleString(),
-        txHash: registerTx.hash,
-        creator: account,
         vnstPaid: requiredFee,
-        isPremium,
-        artworkId
+        isPremium
       };
       setRegisteredWorks(prev => [newWork, ...prev]);
       
-      // Clear form
       setTitle('');
       setIpfsHash('');
       setIsPremium(false);
@@ -293,6 +314,7 @@ function App() {
     }
   };
 
+  // SIMPLIFIED AI VERIFICATION FUNCTION
   const requestAIVerification = async (artworkId) => {
     if (!copyrightContract || !vbtcContract) return;
     
@@ -303,31 +325,87 @@ function App() {
     }
 
     try {
+      setAiProcessing(true);
       setLoading(true);
-      setStatus('🤖 Requesting AI verification...');
+      setStatus('🤖 Starting AI analysis...');
       setStatusType('info');
       
-      // Approve vBTC spending
+      const artwork = userArtworks.find(art => art.id === artworkId);
+      if (!artwork) {
+        throw new Error('Artwork not found');
+      }
+      
+      // Call AI backend
+      setStatus('🧠 AI analyzing artwork...');
+      const aiResponse = await fetch(`${AI_BACKEND_URL}/analyze-artwork`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ipfsHash: artwork.ipfsHash,
+          artworkTitle: artwork.title
+        })
+      });
+      
+      if (!aiResponse.ok) {
+        throw new Error('AI analysis failed');
+      }
+      
+      const aiResult = await aiResponse.json();
+      console.log('AI Result:', aiResult);
+      
+      // Payment process with higher gas
+      setStatus('💰 Processing vBTC payment...');
       const aiFeeWei = ethers.parseUnits(aiFee, 8);
-      const approveTx = await vbtcContract.approve(copyrightChainAddress, aiFeeWei);
+      
+      const approveTx = await vbtcContract.approve(copyrightChainAddress, aiFeeWei, {
+        gasLimit: 150000,
+        gasPrice: ethers.parseUnits('20', 'gwei')
+      });
       await approveTx.wait();
       
-      // Request AI verification
-      const verifyTx = await copyrightContract.requestAIVerification(artworkId);
+      const verifyTx = await copyrightContract.requestAIVerification(artworkId, {
+        gasLimit: 400000,
+        gasPrice: ethers.parseUnits('20', 'gwei')
+      });
       await verifyTx.wait();
       
-      await updateBalances(vnstContract, vbtcContract, copyrightContract, account);
+      // Submit results with maximum gas and shorter hash
+      setStatus('📝 Recording AI results...');
+      const shortHash = aiResult.aiAnalysis.verificationHash.substring(0, 20); // Shorter hash
       
-      setStatus(`✅ AI verification completed! Paid ${aiFee} vBTC.`);
+      const submitTx = await copyrightContract.submitAIResults(
+        artworkId,
+        aiResult.aiAnalysis.authenticityScore,
+        shortHash, // Use shorter hash to avoid encoding issues
+        { 
+          gasLimit: 600000, // Very high gas limit
+          gasPrice: ethers.parseUnits('30', 'gwei') // Higher gas price
+        }
+      );
+      await submitTx.wait();
+      
+      // Wait and refresh
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      await updateAllData(vnstContract, vbtcContract, copyrightContract, account);
+      
+      setStatus(`✅ AI verification completed! Score: ${aiResult.aiAnalysis.authenticityScore}/100`);
       setStatusType('success');
       
     } catch (error) {
+      console.error('AI verification error:', error);
       setStatus(`❌ AI verification failed: ${error.message}`);
       setStatusType('error');
     } finally {
       setLoading(false);
+      setAiProcessing(false);
     }
   };
+
+  useEffect(() => {
+    checkAIBackend();
+    const interval = setInterval(checkAIBackend, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const TabPanel = ({ children, value, index }) => (
     <div hidden={value !== index}>
@@ -346,6 +424,13 @@ function App() {
               CopyrightChain DApp - SEA Ideathon 2025
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Chip 
+                label={`AI: ${aiBackendStatus.toUpperCase()}`}
+                color={aiBackendStatus === 'online' ? 'success' : 'error'}
+                size="small"
+                icon={<SmartToy />}
+              />
+              
               {account && (
                 <>
                   <Badge badgeContent="VNST" color="primary">
@@ -392,6 +477,7 @@ function App() {
               onClose={() => setStatus('')}
             >
               {status}
+              {aiProcessing && <LinearProgress sx={{ mt: 1 }} />}
             </Alert>
           )}
 
@@ -404,9 +490,9 @@ function App() {
               <Grid item xs={12} md={4}>
                 <Box sx={{ textAlign: 'center' }}>
                   <SmartToy sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
-                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Science (AI)</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Science (Real AI)</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    AI-powered artwork verification using vBTC payments
+                    Live AI backend with computer vision analysis
                   </Typography>
                 </Box>
               </Grid>
@@ -415,7 +501,7 @@ function App() {
                   <TrendingUp sx={{ fontSize: 48, color: 'secondary.main', mb: 1 }} />
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Economics</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Dual-token economy with VNST licensing marketplace
+                    Dual-token economy with VNST/vBTC payments
                   </Typography>
                 </Box>
               </Grid>
@@ -424,7 +510,7 @@ function App() {
                   <Copyright sx={{ fontSize: 48, color: 'primary.main', mb: 1 }} />
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Art</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Blockchain copyright protection and licensing
+                    Immutable blockchain copyright protection
                   </Typography>
                 </Box>
               </Grid>
@@ -436,7 +522,7 @@ function App() {
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)} centered>
                 <Tab label="🎨 Register Artwork" />
-                <Tab label="🤖 AI Verification" />
+                <Tab label="🤖 Real AI Verification" />
                 <Tab label="💰 Token Management" />
                 <Tab label="📊 Dashboard" />
               </Tabs>
@@ -527,21 +613,34 @@ function App() {
                       ⭐ Premium Registration: {premiumFee} VNST  
                     </Typography>
                     <Typography variant="body2">
-                      🤖 AI Verification: {aiFee} vBTC
+                      🤖 Real AI Verification: {aiFee} vBTC
                     </Typography>
                   </Paper>
                 </Grid>
               </Grid>
             </TabPanel>
 
-            {/* Tab 2: AI Verification */}
+            {/* Tab 2: Real AI Verification */}
             <TabPanel value={tabValue} index={1}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
                 <SmartToy sx={{ mr: 2, color: 'primary.main', fontSize: 32 }} />
                 <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                  AI-Powered Verification (Science Component)
+                  Real AI-Powered Verification
                 </Typography>
+                <Button 
+                  onClick={() => updateAllData(vnstContract, vbtcContract, copyrightContract, account)}
+                  variant="outlined" 
+                  startIcon={<Refresh />}
+                  sx={{ ml: 'auto' }}
+                >
+                  Refresh Data
+                </Button>
               </Box>
+              
+              <Alert severity="info" sx={{ mb: 3 }}>
+                AI Backend Status: <strong>{aiBackendStatus.toUpperCase()}</strong>
+                {aiBackendStatus === 'offline' && ' - Please start the AI backend server'}
+              </Alert>
               
               {userArtworks.length > 0 ? (
                 <Grid container spacing={3}>
@@ -549,34 +648,37 @@ function App() {
                     <Grid item xs={12} md={6} key={index}>
                       <Card sx={{ p: 3, backgroundColor: 'rgba(0, 212, 170, 0.1)', borderRadius: 2 }}>
                         <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                          {artwork[1]} {/* title */}
+                          {artwork.title}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                          📁 {artwork[2].substring(0, 30)}... {/* ipfsHash */}
+                          📁 {artwork.ipfsHash.substring(0, 30)}...
                         </Typography>
                         
-                        {artwork[7] ? ( /* isAIVerified */
+                        {artwork.isAIVerified ? (
                           <Box>
                             <Chip 
-                              label={`✅ AI Verified - Score: ${artwork[8]}/100`} /* aiConfidenceScore */
+                              label={`✅ Real AI Verified - Score: ${artwork.aiConfidenceScore}/100`}
                               color="success" 
                               sx={{ mb: 2 }}
                             />
-                            <Typography variant="body2" color="text.secondary">
-                              Verification Hash: {artwork[9].substring(0, 20)}... {/* aiVerificationHash */}
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                              🎯 Confidence: {artwork.aiConfidenceScore}% authentic
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              🔐 Hash: {artwork.aiVerificationHash.substring(0, 20)}...
                             </Typography>
                           </Box>
                         ) : (
                           <Button
                             variant="contained"
                             onClick={() => requestAIVerification(artwork.id)}
-                            disabled={loading || parseFloat(vbtcBalance) < parseFloat(aiFee)}
+                            disabled={loading || parseFloat(vbtcBalance) < parseFloat(aiFee) || aiBackendStatus !== 'online'}
                             sx={{ 
                               background: 'linear-gradient(45deg, #ff6b6b, #ff8e53)',
                               width: '100%'
                             }}
                           >
-                            🤖 Request AI Verification ({aiFee} vBTC)
+                            🤖 Real AI Analysis ({aiFee} vBTC)
                           </Button>
                         )}
                       </Card>
@@ -588,6 +690,13 @@ function App() {
                   <Typography variant="h6" color="text.secondary">
                     No artworks registered yet. Register an artwork first to use AI verification.
                   </Typography>
+                  <Button 
+                    variant="contained" 
+                    onClick={() => setTabValue(0)}
+                    sx={{ mt: 2, background: 'linear-gradient(45deg, #00d4aa, #007b8a)' }}
+                  >
+                    Register First Artwork
+                  </Button>
                 </Paper>
               )}
             </TabPanel>
@@ -634,7 +743,7 @@ function App() {
                       {parseFloat(vbtcBalance).toFixed(4)}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                      Virtual Bitcoin for AI verification and premium features
+                      Virtual Bitcoin for real AI verification and premium features
                     </Typography>
                     <Button
                       onClick={() => getFreeTokens('vBTC')}
@@ -687,9 +796,9 @@ function App() {
                 <Grid item xs={12} md={3}>
                   <Card sx={{ p: 3, textAlign: 'center', backgroundColor: 'rgba(255, 107, 107, 0.1)' }}>
                     <Typography variant="h3" sx={{ color: 'secondary.main', mb: 1 }}>
-                      {parseFloat(creatorEarnings).toFixed(0)}
+                      {aiBackendStatus === 'online' ? '🟢' : '🔴'}
                     </Typography>
-                    <Typography variant="body1">Your Earnings (VNST)</Typography>
+                    <Typography variant="body1">AI Backend</Typography>
                   </Card>
                 </Grid>
               </Grid>
@@ -722,9 +831,6 @@ function App() {
                                 <Typography variant="body2" color="text.secondary">
                                   💰 {work.vnstPaid} VNST • 🕒 {work.timestamp}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                  TX: {work.txHash.substring(0, 20)}...
-                                </Typography>
                               </Box>
                             }
                           />
@@ -735,39 +841,6 @@ function App() {
                   </List>
                 </Card>
               )}
-
-              {/* Contract Addresses */}
-              <Card sx={{ mt: 4, p: 3, backgroundColor: 'rgba(0, 212, 170, 0.1)' }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
-                  📋 Contract Information
-                </Typography>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>VNST Token:</strong>
-                    </Typography>
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                      {vnstTokenAddress}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>vBTC Token:</strong>
-                    </Typography>
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                      {vbtcTokenAddress}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>CopyrightChain:</strong>
-                    </Typography>
-                    <Typography variant="caption" sx={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                      {copyrightChainAddress}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Card>
             </TabPanel>
           </Card>
         </Container>

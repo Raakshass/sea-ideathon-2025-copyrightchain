@@ -29,7 +29,7 @@ contract CopyrightChain {
         address licensee;
         uint256 price;
         uint256 timestamp;
-        uint256 duration; // in seconds
+        uint256 duration;
         bool isActive;
     }
 
@@ -61,6 +61,13 @@ contract CopyrightChain {
         uint256 timestamp,
         uint256 vnstPaid,
         bool isPremium
+    );
+    
+    event AIAnalysisRequested(
+        bytes32 indexed artworkId, 
+        string ipfsHash, 
+        address indexed requester,
+        uint256 vbtcPaid
     );
     
     event AIVerified(
@@ -138,7 +145,7 @@ contract CopyrightChain {
         return id;
     }
 
-    // AI Verification using vBTC (Science component)
+    // Request AI Verification (triggers external AI backend)
     function requestAIVerification(bytes32 artworkId) public onlyArtworkCreator(artworkId) {
         require(artworks[artworkId].timestamp > 0, "Artwork does not exist");
         require(!artworks[artworkId].isAIVerified, "Artwork already AI verified");
@@ -149,16 +156,27 @@ contract CopyrightChain {
             "vBTC payment failed"
         );
 
-        // Simulate AI verification (in real implementation, this would call external AI service)
-        uint8 confidenceScore = _simulateAIVerification(artworkId);
-        string memory verificationHash = _generateVerificationHash(artworkId, confidenceScore);
+        artworks[artworkId].vbtcPaid = aiVerificationFee;
+        
+        // Emit event for AI backend to process
+        emit AIAnalysisRequested(artworkId, artworks[artworkId].ipfsHash, msg.sender, aiVerificationFee);
+    }
+
+    // Submit AI Results (called after AI analysis completes) - REMOVED ACCESS CONTROL FOR DEMO
+    function submitAIResults(
+        bytes32 artworkId, 
+        uint8 confidenceScore, 
+        string memory verificationHash
+    ) public {
+        require(artworks[artworkId].timestamp > 0, "Artwork does not exist");
+        require(artworks[artworkId].vbtcPaid > 0, "AI verification not paid for");
+        require(confidenceScore >= 65 && confidenceScore <= 100, "Invalid confidence score");
         
         artworks[artworkId].isAIVerified = true;
         artworks[artworkId].aiConfidenceScore = confidenceScore;
         artworks[artworkId].aiVerificationHash = verificationHash;
-        artworks[artworkId].vbtcPaid = aiVerificationFee;
         
-        emit AIVerified(artworkId, confidenceScore, verificationHash, aiVerificationFee);
+        emit AIVerified(artworkId, confidenceScore, verificationHash, artworks[artworkId].vbtcPaid);
     }
 
     // Economics component: Licensing marketplace
@@ -200,17 +218,6 @@ contract CopyrightChain {
         totalLicensesSold++;
         
         emit LicensePurchased(artworkId, msg.sender, totalPrice, durationInDays * 1 days);
-    }
-
-    // Utility functions
-    function _simulateAIVerification(bytes32 artworkId) private view returns (uint8) {
-        // Simulate AI confidence score based on artwork hash
-        uint256 hash = uint256(artworkId);
-        return uint8((hash % 31) + 70); // Score between 70-100
-    }
-    
-    function _generateVerificationHash(bytes32 artworkId, uint8 score) private pure returns (string memory) {
-        return string(abi.encodePacked("AI_VERIFIED_", artworkId, "_SCORE_", score));
     }
 
     // View functions
