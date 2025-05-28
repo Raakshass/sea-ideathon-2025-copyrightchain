@@ -62,7 +62,7 @@ This is a full **SEA (Science + Economics + Art)** integration.
 5. Use AI to check if it's original
 6. See your results and history in the dashboard
 
-👉 **[Watch our 4-minute demo]([YOUR_VIDEO_LINK_HERE](https://www.youtube.com/watch?v=c7P7GN4RNEY))**
+👉 **[Watch our 4-minute demo](https://www.youtube.com/watch?v=c7P7GN4RNEY)**
 
 ---
 
