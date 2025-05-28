@@ -1,183 +1,187 @@
-🏆 CopyrightChain – SEA Ideathon 2025
-Protecting Digital Art with AI + Blockchain
-🎨 The Problem
-Digital artists are constantly facing art theft — about 85% of them! People steal and repost art without permission, which leads to lost income and no way to prove who created it first.
+# 🏆 CopyrightChain – SEA Ideathon 2025
 
-For example, Sarah, a digital artist from Vietnam, struggles to:
+### Protecting Digital Art with AI + Blockchain
 
-Prove she created her art first
 
-Stop others from copying and using her art
+## 🎨 The Problem
 
-Show her art is original
+Digital artists are constantly facing **art theft** — about **85%** of them! People steal and repost art without permission, which leads to lost income and no way to prove who created it first.
 
-Make fair money from her work
+**Meet Sarah**, a digital artist from Vietnam, who struggles to:
 
-✅ Our Solution: CopyrightChain
+* Prove she created her art first
+* Stop others from copying and using her art
+* Show her art is original
+* Make fair money from her work
+
+
+## ✅ Our Solution: CopyrightChain
+
 We built a platform that:
 
-Verifies art originality using AI
+* ✅ **Verifies art originality using AI**
+* 🔒 **Registers copyright on blockchain forever**
+* 💸 **Lets artists earn with a licensing system**
+* 💱 **Uses a dual-token model for payments (VNST & vBTC)**
 
-Registers copyright on blockchain forever
+This is a full **SEA (Science + Economics + Art)** integration.
 
-Lets artists earn with a licensing system
+---
 
-Uses a dual-token model for payments (VNST & vBTC)
+## 🔬 SCIENCE (AI Verification)
 
-This is a full SEA (Science + Economics + Art) integration:
+* We use AI to check if the art is original
+* It gives a score (from **65% to 100%**) showing how likely it's authentic
+* We store everything on **IPFS**, a decentralized storage system
 
-🔬 SCIENCE (AI Verification)
-We use AI to check if the art is original
+---
 
-It gives a score (from 65% to 100%) showing how likely it's authentic
+## 💰 ECONOMICS (Artist-Friendly Economy)
 
-We store everything on IPFS, a decentralized storage system
+* Artists can earn through licensing their art
+* Payments happen using **VNST** (Vietnam Stable Token) and **vBTC** (Virtual Bitcoin)
+* Smart contracts automate fair fees and secure transactions
 
-💰 ECONOMICS (Artist-Friendly Economy)
-Artists can earn through licensing their art
+---
 
-Payments happen using VNST (Vietnam Stable Token) and vBTC (Virtual Bitcoin)
+## 🖼️ ART (Copyright Protection)
 
-Smart contracts automate fair fees and secure transactions
+* Artwork is time-stamped on the blockchain
+* Stored forever in decentralized storage
+* Cannot be changed or faked
+* Accepted globally as proof of ownership
 
-🖼️ ART (Copyright Protection)
-Artwork is time-stamped on the blockchain
+---
 
-Stored forever in decentralized storage
+## 🚀 Try It Out – Demo Steps
 
-Cannot be changed or faked
+1. Upload your artwork
+2. Connect your MetaMask wallet
+3. Get test tokens (VNST & vBTC)
+4. Register your artwork with title and image hash
+5. Use AI to check if it's original
+6. See your results and history in the dashboard
 
-Accepted globally as proof of ownership
+👉 **[Watch our 4-minute demo]([YOUR_VIDEO_LINK_HERE](https://www.youtube.com/watch?v=c7P7GN4RNEY))**
 
-🚀 Try It Out – Demo Steps
-Upload your artwork
+---
 
-Connect your MetaMask wallet
+## 🏗️ How It’s Built
 
-Get test tokens (VNST & vBTC)
+* **Frontend**: React.js + Material UI
+* **Blockchain**: Hardhat, Solidity, MetaMask
+* **AI Backend**: Node.js, Express, Computer Vision
+* **Storage**: IPFS + Pinata
 
-Register your artwork with title and image hash
+### 🔌 Architecture Diagram
 
-Use AI to check if it's original
-
-See your results and history in the dashboard
-
-👉 Watch our 4-minute demo
-
-🏗️ How It’s Built
-Frontend: React.js + Material UI
-
-Blockchain: Hardhat, Solidity, MetaMask
-
-AI Backend: Node.js, Express, Computer Vision
-
-Storage: IPFS + Pinata
-
-🔌 Architecture Diagram
-scss
-Copy
-Edit
+```
 Frontend (React) ↔ AI Backend (Node.js + ML) ↔ Blockchain (Smart Contracts)
         ↘ MetaMask + IPFS Integration ↙
-⚙️ Quick Setup Guide
-Clone the project:
+```
 
-bash
-Copy
-Edit
-git clone https://github.com/Raakshass/sea-ideathon-2025-copyrightchain.git
-Start Blockchain:
+---
 
-arduino
-Copy
-Edit
-npx hardhat node  
-npx hardhat run scripts/deploy.js --network localhost
-Start AI Backend:
+## ⚙️ Quick Setup Guide
 
-nginx
-Copy
-Edit
-node server.js
-Start Frontend:
+1. **Clone the project:**
 
-sql
-Copy
-Edit
-npm start
-Set up MetaMask with local network
+   ```bash
+   git clone https://github.com/Raakshass/sea-ideathon-2025-copyrightchain.git
+   ```
 
-🔑 Key Features
-For Artists
-AI to prove their work is original
+2. **Start Blockchain:**
 
-Instant copyright protection
+   ```bash
+   npx hardhat node  
+   npx hardhat run scripts/deploy.js --network localhost
+   ```
 
-Earn revenue via licensing
+3. **Start AI Backend:**
 
-Global recognition of ownership
+   ```bash
+   node server.js
+   ```
 
-For Buyers
-Verified art
+4. **Start Frontend:**
 
-Transparent history
+   ```bash
+   npm start
+   ```
 
-Fair pricing
+5. **Configure MetaMask:**
+   Connect it to the local blockchain network.
 
-Secure smart contracts
+---
 
-For Platforms
-Anti-theft
+## 🔑 Key Features
 
-Automated checks
+### For Artists
 
-Legal proof using blockchain
+* AI to prove their work is original
+* Instant copyright protection
+* Earn revenue via licensing
+* Global recognition of ownership
 
-Easy revenue sharing
+### For Buyers
 
-📊 Results from the Demo
-Artworks Registered: 1
+* Verified art
+* Transparent history
+* Fair pricing
+* Secure smart contracts
 
-AI Verification Confidence: 89%
+### For Platforms
 
-Revenue Generated: 500 VNST
+* Anti-theft
+* Automated checks
+* Legal proof using blockchain
+* Easy revenue sharing
 
-Transaction Speed: < 3 seconds
+---
 
-Security: Military-grade encryption
+## 📊 Results from the Demo
 
-🔮 What's Next?
-Phase 1:
+* 🎨 Artworks Registered: `1`
+* 🤖 AI Verification Confidence: `89%`
+* 💵 Revenue Generated: `500 VNST`
+* ⚡ Transaction Speed: `< 3 seconds`
+* 🔐 Security: `Military-grade encryption`
 
-Deploy on Polygon or BSC mainnet
+---
 
-Build mobile app
+## 🔮 What's Next?
 
-Phase 2:
+### Phase 1:
 
-Smarter AI for art style recognition
+* Deploy on Polygon or BSC mainnet
+* Build mobile app
 
-Reverse image search
+### Phase 2:
 
-Phase 3:
+* Smarter AI for art style recognition
+* Reverse image search
 
-NFT marketplace
+### Phase 3:
 
-Legal partnerships
+* NFT marketplace
+* Legal partnerships
+* Multi-language support
 
-Multi-language support
+---
 
-🏅 Achievements at SEA Ideathon 2025
-✅ Real AI, not just hype
-✅ Blockchain + AI + Art integration
-✅ Solves real-world problem
-✅ Modern UI & production-ready code
+## 🏅 Achievements at SEA Ideathon 2025
 
-👨‍💻 About the Team
-👨‍💻 Lead Developer: Siddhant Jain
+* ✅ Real AI, not just hype
+* ✅ Blockchain + AI + Art integration
+* ✅ Solves real-world problem
+* ✅ Modern UI & production-ready code
 
-💻 GitHub: @Raakshass
+---
 
-🏁 Project: CopyrightChain
+## 👨‍💻 About the Team
 
-🧠 Competition: SEA Ideathon 2025
+* 👨‍💻 **Lead Developer**: Siddhant Jain
+* 💻 **GitHub**: [@Raakshass](https://github.com/Raakshass)
+* 🏁 **Project**: CopyrightChain
+* 🧠 **Competition**: SEA Ideathon 2025
+
